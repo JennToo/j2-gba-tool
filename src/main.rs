@@ -16,13 +16,6 @@ macro_rules! fatal {
         std::process::exit(0);
     }
 }
-macro_rules! warn {
-    ($fmt_string:expr, $( $arg:expr ),*) => {
-        use colored::*;
-        eprint!("{} ", "Warning:".bold().yellow());
-        eprintln!($fmt_string, $( $arg ),*);
-    }
-}
 
 fn main() {
     let matches = clap::App::new("j2-gba-tool")
@@ -64,23 +57,22 @@ fn main() {
         match format {
             "bg256c1p" => {
                 let (pixels, pal) = convert_image(input_img.to_rgba());
-
-                let mut file =
-                    std::fs::File::create(matches.value_of("pixel-output-file").unwrap())
-                        .expect("Failed to open output file");
-                file.write_all(pixels.as_slice())
-                    .expect("Failed to write output file");
-                let mut file =
-                    std::fs::File::create(matches.value_of("pallete-output-file").unwrap())
-                        .expect("Failed to open output file");
-                file.write_all(pal.as_slice())
-                    .expect("Failed to write output file");
+                write_bytes_to_file(matches.value_of("pixel-output-file").unwrap(), pixels.as_slice());
+                write_bytes_to_file(matches.value_of("pallete-output-file").unwrap(), pal.as_slice());
             }
             _ => {
                 fatal!("Unsupported format {}", format);
             }
         }
     }
+}
+
+fn write_bytes_to_file(path: &str, data: &[u8]) {
+    let mut file =
+        std::fs::File::create(path)
+        .expect("Failed to open output file");
+    file.write_all(data)
+        .expect("Failed to write output file");
 }
 
 fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
@@ -120,13 +112,14 @@ fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
 }
 
 type Color = image::Rgba<u8>;
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 struct GbaColor(u16);
 
 struct Pallete {
     max_count: usize,
     next_free: usize,
-    index_by_color: HashMap<Color, usize>,
-    color_by_index: HashMap<usize, Color>,
+    index_by_color: HashMap<GbaColor, usize>,
+    color_by_index: HashMap<usize, GbaColor>,
 }
 
 impl Pallete {
@@ -140,6 +133,7 @@ impl Pallete {
     }
 
     fn lookup_or_insert(&mut self, color: Color) -> Option<usize> {
+        let color = GbaColor::from_color(color);
         if let Some(idx) = self.index_by_color.get(&color) {
             Some(*idx)
         } else if self.next_free == self.max_count {
@@ -157,10 +151,8 @@ impl Pallete {
         let mut data = vec![];
         for i in 0..self.max_count {
             if let Some(color) = self.color_by_index.get(&i) {
-                let packed = GbaColor::from_color(*color).0;
-                data.push(packed as u8);
-                data.push((packed >> 8) as u8);
-                println!("{:?} -> {:04x}", color, packed);
+                data.push(color.0 as u8);
+                data.push((color.0 >> 8) as u8);
             } else {
                 data.push(0);
                 data.push(0);
