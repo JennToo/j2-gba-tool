@@ -57,8 +57,14 @@ fn main() {
         match format {
             "bg256c1p" => {
                 let (pixels, pal) = convert_image(input_img.to_rgba());
-                write_bytes_to_file(matches.value_of("pixel-output-file").unwrap(), pixels.as_slice());
-                write_bytes_to_file(matches.value_of("pallete-output-file").unwrap(), pal.as_slice());
+                write_bytes_to_file(
+                    matches.value_of("pixel-output-file").unwrap(),
+                    pixels.as_slice(),
+                );
+                write_bytes_to_file(
+                    matches.value_of("pallete-output-file").unwrap(),
+                    pal.as_slice(),
+                );
             }
             _ => {
                 fatal!("Unsupported format {}", format);
@@ -68,11 +74,8 @@ fn main() {
 }
 
 fn write_bytes_to_file(path: &str, data: &[u8]) {
-    let mut file =
-        std::fs::File::create(path)
-        .expect("Failed to open output file");
-    file.write_all(data)
-        .expect("Failed to write output file");
+    let mut file = std::fs::File::create(path).expect("Failed to open output file");
+    file.write_all(data).expect("Failed to write output file");
 }
 
 fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
