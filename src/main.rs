@@ -115,7 +115,7 @@ fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
 }
 
 type Color = image::Rgba<u8>;
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 struct GbaColor(u16);
 
 struct Pallete {
@@ -136,7 +136,7 @@ impl Pallete {
     }
 
     fn lookup_or_insert(&mut self, color: Color) -> Option<usize> {
-        let color = GbaColor::from_color(color);
+        let color: GbaColor = color.into();
         if let Some(idx) = self.index_by_color.get(&color) {
             Some(*idx)
         } else if self.next_free == self.max_count {
@@ -171,12 +171,45 @@ fn map_channel(chan: u8) -> u16 {
     ((chan >> 3) & COLOR_MASK) as u16
 }
 
-impl GbaColor {
-    fn from_color(color: Color) -> GbaColor {
+#[cfg(test)]
+fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
+    Color { data: [r, g, b, a] }
+}
+
+impl From<Color> for GbaColor {
+    fn from(color: Color) -> GbaColor {
         GbaColor(
             map_channel(color.channels()[0])
                 | (map_channel(color.channels()[1]) << 5)
                 | (map_channel(color.channels()[2]) << 10),
         )
     }
+}
+
+#[test]
+fn test_gba_color() {
+    assert_eq!(
+        GbaColor::from(rgba(0b00000000, 0b00000000, 0b00000000, 255)),
+        GbaColor(0b0_00000_00000_00000)
+    );
+    assert_eq!(
+        GbaColor::from(rgba(0b00000000, 0b00000000, 0b10000000, 255)),
+        GbaColor(0b0_10000_00000_00000)
+    );
+}
+
+#[test]
+fn test_pal() {
+    let mut pal = Pallete::new(3);
+
+    let color1 = rgba(255, 0, 0, 255);
+    let color2 = rgba(255, 0, 255, 255);
+    let color3 = rgba(255, 255, 0, 255);
+    let color4 = rgba(255, 255, 255, 255);
+
+    assert_eq!(pal.lookup_or_insert(color1), Some(0));
+    assert_eq!(pal.lookup_or_insert(color2), Some(1));
+    assert_eq!(pal.lookup_or_insert(color1), Some(0));
+    assert_eq!(pal.lookup_or_insert(color3), Some(2));
+    assert_eq!(pal.lookup_or_insert(color4), None);
 }
