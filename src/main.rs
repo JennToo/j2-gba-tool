@@ -11,7 +11,7 @@ macro_rules! fatal {
         use colored::*;
         eprint!("{} ", "Error:".bold().red());
         eprintln!($fmt_string, $( $arg ),*);
-        std::process::exit(0);
+        std::process::exit(1);
     }
 }
 
