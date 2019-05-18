@@ -1,7 +1,7 @@
 use image::RgbaImage;
 
 use crate::fatal;
-use crate::pal::Pallete;
+use crate::pal::Palette;
 
 pub fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
     const TILE_SIZE: u32 = 8;
@@ -14,7 +14,7 @@ pub fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
             TILE_SIZE
         );
     }
-    let mut pallete = Pallete::new(256);
+    let mut palette = Palette::new(256);
     let mut out_pixels = vec![];
 
     let tile_dims = (actual_dims.0 / 8, actual_dims.1 / 8);
@@ -26,9 +26,9 @@ pub fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
                     let src_y = sub_y + tile_y * TILE_SIZE;
 
                     let pixel = img.get_pixel(src_x, src_y);
-                    let value = pallete.lookup_or_insert(*pixel);
+                    let value = palette.lookup_or_insert(*pixel);
                     if value.is_none() {
-                        fatal!("Image has more colors than pallete supports",);
+                        fatal!("Image has more colors than palette supports",);
                     }
                     out_pixels.push(value.unwrap() as u8);
                 }
@@ -36,5 +36,5 @@ pub fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
         }
     }
 
-    (out_pixels, pallete.serialize())
+    (out_pixels, palette.serialize())
 }

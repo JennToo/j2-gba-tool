@@ -2,16 +2,16 @@ use std::collections::HashMap;
 
 use crate::color::{GbaColor, TrueColor};
 
-pub struct Pallete {
+pub struct Palette {
     max_count: usize,
     next_free: usize,
     index_by_color: HashMap<GbaColor, usize>,
     color_by_index: HashMap<usize, GbaColor>,
 }
 
-impl Pallete {
-    pub fn new(max_count: usize) -> Pallete {
-        Pallete {
+impl Palette {
+    pub fn new(max_count: usize) -> Palette {
+        Palette {
             max_count,
             next_free: 0,
             index_by_color: HashMap::new(),
@@ -53,7 +53,7 @@ impl Pallete {
 #[test]
 fn test_pal() {
     use crate::color::rgba;
-    let mut pal = Pallete::new(3);
+    let mut pal = Palette::new(3);
 
     let color1 = rgba(255, 0, 0, 255);
     let color2 = rgba(255, 0, 255, 255);

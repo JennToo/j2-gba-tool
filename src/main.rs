@@ -39,9 +39,9 @@ fn main() {
                         .help("Binary output of the pixel data"),
                 )
                 .arg(
-                    clap::Arg::with_name("pallete-output-file")
+                    clap::Arg::with_name("palette-output-file")
                         .required(false)
-                        .help("Binary output of the pallete data (if relevant)"),
+                        .help("Binary output of the palette data (if relevant)"),
                 ),
         )
         .get_matches();
@@ -60,7 +60,7 @@ fn main() {
                     pixels.as_slice(),
                 );
                 write_bytes_to_file(
-                    matches.value_of("pallete-output-file").unwrap(),
+                    matches.value_of("palette-output-file").unwrap(),
                     pal.as_slice(),
                 );
             }
