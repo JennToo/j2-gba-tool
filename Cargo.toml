@@ -13,6 +13,9 @@ license = "MIT"
 readme = "README.md"
 description = "GBA ROM multi-tool"
 
+[badges.travis-ci]
+repository = "Nitori-/j2-gba-tool"
+
 [dependencies]
 clap = "^2.33.0"
 image = "^0.21.1"
