@@ -1,13 +1,11 @@
-use std::collections::HashMap;
 use std::io::prelude::*;
 use std::path::Path;
 
-use clap;
-use colored;
-use image;
+mod color;
+mod image;
+mod pal;
 
-use image::{Pixel, RgbaImage};
-
+#[macro_export]
 macro_rules! fatal {
     ($fmt_string:expr, $( $arg:expr ),*) => {
         use colored::*;
@@ -50,13 +48,13 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("gfx-convert") {
         let input_path = Path::new(matches.value_of("input-file").unwrap());
-        let input_img = image::open(&input_path).expect("Failed to open input image");
+        let input_img = ::image::open(&input_path).expect("Failed to open input image");
 
         let format = matches.value_of("format").unwrap();
 
         match format {
             "bg256c1p" => {
-                let (pixels, pal) = convert_image(input_img.to_rgba());
+                let (pixels, pal) = image::convert_image(input_img.to_rgba());
                 write_bytes_to_file(
                     matches.value_of("pixel-output-file").unwrap(),
                     pixels.as_slice(),
@@ -76,140 +74,4 @@ fn main() {
 fn write_bytes_to_file(path: &str, data: &[u8]) {
     let mut file = std::fs::File::create(path).expect("Failed to open output file");
     file.write_all(data).expect("Failed to write output file");
-}
-
-fn convert_image(img: RgbaImage) -> (Vec<u8>, Vec<u8>) {
-    const TILE_SIZE: u32 = 8;
-    let actual_dims = img.dimensions();
-
-    if actual_dims.0 % TILE_SIZE != 0 || actual_dims.1 % TILE_SIZE != 0 {
-        fatal!(
-            "Dimensions {:?} are not a multiple of tile size {}",
-            actual_dims,
-            TILE_SIZE
-        );
-    }
-    let mut pallete = Pallete::new(256);
-    let mut out_pixels = vec![];
-
-    let tile_dims = (actual_dims.0 / 8, actual_dims.1 / 8);
-    for tile_y in 0..tile_dims.1 {
-        for tile_x in 0..tile_dims.0 {
-            for sub_y in 0..TILE_SIZE {
-                for sub_x in 0..TILE_SIZE {
-                    let src_x = sub_x + tile_x * TILE_SIZE;
-                    let src_y = sub_y + tile_y * TILE_SIZE;
-
-                    let pixel = img.get_pixel(src_x, src_y);
-                    let value = pallete.lookup_or_insert(*pixel);
-                    if value.is_none() {
-                        fatal!("Image has more colors than pallete supports",);
-                    }
-                    out_pixels.push(value.unwrap() as u8);
-                }
-            }
-        }
-    }
-
-    (out_pixels, pallete.serialize())
-}
-
-type Color = image::Rgba<u8>;
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
-struct GbaColor(u16);
-
-struct Pallete {
-    max_count: usize,
-    next_free: usize,
-    index_by_color: HashMap<GbaColor, usize>,
-    color_by_index: HashMap<usize, GbaColor>,
-}
-
-impl Pallete {
-    fn new(max_count: usize) -> Pallete {
-        Pallete {
-            max_count,
-            next_free: 0,
-            index_by_color: HashMap::new(),
-            color_by_index: HashMap::new(),
-        }
-    }
-
-    fn lookup_or_insert(&mut self, color: Color) -> Option<usize> {
-        let color: GbaColor = color.into();
-        if let Some(idx) = self.index_by_color.get(&color) {
-            Some(*idx)
-        } else if self.next_free == self.max_count {
-            None
-        } else {
-            let idx = self.next_free;
-            self.next_free += 1;
-            self.index_by_color.insert(color, idx);
-            self.color_by_index.insert(idx, color);
-            Some(idx)
-        }
-    }
-
-    fn serialize(&self) -> Vec<u8> {
-        let mut data = vec![];
-        for i in 0..self.max_count {
-            if let Some(color) = self.color_by_index.get(&i) {
-                data.push(color.0 as u8);
-                data.push((color.0 >> 8) as u8);
-            } else {
-                data.push(0);
-                data.push(0);
-            }
-        }
-
-        data
-    }
-}
-
-fn map_channel(chan: u8) -> u16 {
-    const COLOR_MASK: u8 = 0b1_1111;
-    ((chan >> 3) & COLOR_MASK) as u16
-}
-
-#[cfg(test)]
-fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
-    Color { data: [r, g, b, a] }
-}
-
-impl From<Color> for GbaColor {
-    fn from(color: Color) -> GbaColor {
-        GbaColor(
-            map_channel(color.channels()[0])
-                | (map_channel(color.channels()[1]) << 5)
-                | (map_channel(color.channels()[2]) << 10),
-        )
-    }
-}
-
-#[test]
-fn test_gba_color() {
-    assert_eq!(
-        GbaColor::from(rgba(0b00000000, 0b00000000, 0b00000000, 255)),
-        GbaColor(0b0_00000_00000_00000)
-    );
-    assert_eq!(
-        GbaColor::from(rgba(0b00000000, 0b00000000, 0b10000000, 255)),
-        GbaColor(0b0_10000_00000_00000)
-    );
-}
-
-#[test]
-fn test_pal() {
-    let mut pal = Pallete::new(3);
-
-    let color1 = rgba(255, 0, 0, 255);
-    let color2 = rgba(255, 0, 255, 255);
-    let color3 = rgba(255, 255, 0, 255);
-    let color4 = rgba(255, 255, 255, 255);
-
-    assert_eq!(pal.lookup_or_insert(color1), Some(0));
-    assert_eq!(pal.lookup_or_insert(color2), Some(1));
-    assert_eq!(pal.lookup_or_insert(color1), Some(0));
-    assert_eq!(pal.lookup_or_insert(color3), Some(2));
-    assert_eq!(pal.lookup_or_insert(color4), None);
 }
