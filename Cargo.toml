@@ -3,6 +3,15 @@ name = "j2-gba-tool"
 version = "0.1.0"
 authors = ["Jennifer Wilcox <jennifer@nitori.org>"]
 edition = "2018"
+repository = "https://github.com/Nitori-/j2-gba-tool"
+keywords = ["gba"]
+categories = ["command-line-utilities",
+              "development-tools::build-utils",
+              "embedded",
+              "multimedia::encoding"]
+license = "MIT"
+readme = "README.md"
+description = "GBA ROM multi-tool"
 
 [dependencies]
 clap = "^2.33.0"
